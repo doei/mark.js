@@ -1,7 +1,7 @@
 /*!***************************************************
 * mark.js v9.0.0
 * https://markjs.io/
-* Copyright (c) 2014–2018, Julian Kühnel
+* Copyright (c) 2014–2021, Julian Kühnel
 * Released under the MIT license https://git.io/vwTVl
 *****************************************************/
 
@@ -12,6 +12,8 @@
 }(this, (function () { 'use strict';
 
   function _typeof(obj) {
+    "@babel/helpers - typeof";
+
     if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
       _typeof = function (obj) {
         return typeof obj;
@@ -65,9 +67,7 @@
     return _extends.apply(this, arguments);
   }
 
-  var DOMIterator =
-  /*#__PURE__*/
-  function () {
+  var DOMIterator = /*#__PURE__*/function () {
     function DOMIterator(ctx) {
       var iframes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
       var exclude = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
@@ -437,9 +437,7 @@
     return DOMIterator;
   }();
 
-  var RegExpCreator =
-  /*#__PURE__*/
-  function () {
+  var RegExpCreator = /*#__PURE__*/function () {
     function RegExpCreator(options) {
       _classCallCheck(this, RegExpCreator);
 
@@ -649,9 +647,7 @@
     return RegExpCreator;
   }();
 
-  var Mark =
-  /*#__PURE__*/
-  function () {
+  var Mark = /*#__PURE__*/function () {
     function Mark(ctx) {
       _classCallCheck(this, Mark);
 
@@ -665,6 +661,36 @@
     }
 
     _createClass(Mark, [{
+      key: "opt",
+      get: function get() {
+        return this._opt;
+      },
+      set: function set(val) {
+        this._opt = _extends({}, {
+          'element': '',
+          'className': '',
+          'exclude': [],
+          'iframes': false,
+          'iframesTimeout': 5000,
+          'separateWordSearch': true,
+          'acrossElements': false,
+          'ignoreGroups': 0,
+          'each': function each() {},
+          'noMatch': function noMatch() {},
+          'filter': function filter() {
+            return true;
+          },
+          'done': function done() {},
+          'debug': false,
+          'log': window.console
+        }, val);
+      }
+    }, {
+      key: "iterator",
+      get: function get() {
+        return new DOMIterator(this.ctx, this.opt.iframes, this.opt.exclude, this.opt.iframesTimeout);
+      }
+    }, {
       key: "log",
       value: function log(msg) {
         var level = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'debug';
@@ -683,16 +709,25 @@
       value: function getSeparatedKeywords(sv) {
         var _this = this;
 
-        var stack = [];
+        var stack = [],
+            originalValues = [];
         sv.forEach(function (kw) {
+          var originalValue = kw;
+
+          if (_typeof(kw) === 'object' && kw !== null) {
+            kw = kw.keyword;
+          }
+
           if (!_this.opt.separateWordSearch) {
             if (kw.trim() && stack.indexOf(kw) === -1) {
               stack.push(kw);
+              originalValues.push(originalValue);
             }
           } else {
             kw.split(' ').forEach(function (kwSplitted) {
               if (kwSplitted.trim() && stack.indexOf(kwSplitted) === -1) {
                 stack.push(kwSplitted);
+                originalValues.push(originalValue);
               }
             });
           }
@@ -701,6 +736,7 @@
           'keywords': stack.sort(function (a, b) {
             return b.length - a.length;
           }),
+          'originalValues': originalValues,
           'length': stack.length
         };
       }
@@ -922,7 +958,7 @@
             var match;
 
             while ((match = regex.exec(node.textContent)) !== null && match[matchIdx] !== '') {
-              if (_this5.opt.separateGroups) {
+              if (_this5.opt.separateGroups && match.length !== 1) {
                 node = _this5.separateGroups(node, match, matchIdx, filterCb, eachCb);
               } else {
                 if (!filterCb(match[matchIdx], node)) {
@@ -1075,13 +1111,20 @@
         this.opt = opt;
         var totalMatches = 0,
             fn = 'wrapMatches';
+        var initialValues = typeof sv === 'string' ? [sv] : sv;
 
-        var _this$getSeparatedKey = this.getSeparatedKeywords(typeof sv === 'string' ? [sv] : sv),
+        var _this$getSeparatedKey = this.getSeparatedKeywords(initialValues),
             kwArr = _this$getSeparatedKey.keywords,
             kwArrLen = _this$getSeparatedKey.length,
-            handler = function handler(kw) {
+            originalValues = _this$getSeparatedKey.originalValues,
+            handler = function handler(kw, index) {
           var regex = new RegExpCreator(_this9.opt).create(kw);
           var matches = 0;
+          var originalArrayElement = originalValues[index];
+
+          if (_typeof(kw) === 'object' && kw !== null) {
+            kw = kw.keyword;
+          }
 
           _this9.log("Searching with expression \"".concat(regex, "\""));
 
@@ -1091,16 +1134,17 @@
             matches++;
             totalMatches++;
 
-            _this9.opt.each(element);
+            _this9.opt.each(element, originalArrayElement);
           }, function () {
             if (matches === 0) {
-              _this9.opt.noMatch(kw);
+              _this9.opt.noMatch(kw, originalArrayElement);
             }
 
-            if (kwArr[kwArrLen - 1] === kw) {
+            if (kwArrLen - 1 === index) {
               _this9.opt.done(totalMatches);
             } else {
-              handler(kwArr[kwArr.indexOf(kw) + 1]);
+              var nextIndex = index + 1;
+              handler(kwArr[nextIndex], nextIndex);
             }
           });
         };
@@ -1112,7 +1156,7 @@
         if (kwArrLen === 0) {
           this.opt.done(totalMatches);
         } else {
-          handler(kwArr[0]);
+          handler(kwArr[0], 0);
         }
       }
     }, {
@@ -1165,36 +1209,6 @@
             return NodeFilter.FILTER_ACCEPT;
           }
         }, this.opt.done);
-      }
-    }, {
-      key: "opt",
-      set: function set(val) {
-        this._opt = _extends({}, {
-          'element': '',
-          'className': '',
-          'exclude': [],
-          'iframes': false,
-          'iframesTimeout': 5000,
-          'separateWordSearch': true,
-          'acrossElements': false,
-          'ignoreGroups': 0,
-          'each': function each() {},
-          'noMatch': function noMatch() {},
-          'filter': function filter() {
-            return true;
-          },
-          'done': function done() {},
-          'debug': false,
-          'log': window.console
-        }, val);
-      },
-      get: function get() {
-        return this._opt;
-      }
-    }, {
-      key: "iterator",
-      get: function get() {
-        return new DOMIterator(this.ctx, this.opt.iframes, this.opt.exclude, this.opt.iframesTimeout);
       }
     }]);
 

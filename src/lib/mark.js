@@ -114,16 +114,22 @@ class Mark {
    * @access protected
    */
   getSeparatedKeywords(sv) {
-    let stack = [];
+    let stack = [], originalValues = [];
     sv.forEach(kw => {
+      const originalValue = kw;
+      if (typeof kw === 'object' && kw !== null){
+        kw = kw.keyword;
+      }
       if (!this.opt.separateWordSearch) {
         if (kw.trim() && stack.indexOf(kw) === -1) {
           stack.push(kw);
+          originalValues.push(originalValue);
         }
       } else {
         kw.split(' ').forEach(kwSplitted => {
           if (kwSplitted.trim() && stack.indexOf(kwSplitted) === -1) {
             stack.push(kwSplitted);
+            originalValues.push(originalValue);
           }
         });
       }
@@ -133,7 +139,8 @@ class Mark {
       'keywords': stack.sort((a, b) => {
         return b.length - a.length;
       }),
-      'length': stack.length
+      'originalValues': originalValues,
+      'length': stack.length,
     };
   }
 
@@ -827,30 +834,35 @@ class Mark {
    */
   mark(sv, opt) {
     this.opt = opt;
-    let totalMatches = 0,
-      fn = 'wrapMatches';
+    let totalMatches = 0, fn = 'wrapMatches';
+
+    const initialValues = typeof sv === 'string' ? [sv] : sv;
+
     const {
         keywords: kwArr,
-        length: kwArrLen
-      } = this.getSeparatedKeywords(typeof sv === 'string' ? [sv] : sv),
-      handler = kw => { // async function calls as iframes are async too
+        length: kwArrLen,
+        originalValues
+      } = this.getSeparatedKeywords(initialValues),
+      handler = (kw, index) => {
         const regex = new RegExpCreator(this.opt).create(kw);
         let matches = 0;
+        const originalArrayElement = originalValues[index];
         this.log(`Searching with expression "${regex}"`);
         this[fn](regex, 1, (term, node) => {
           return this.opt.filter(node, kw, totalMatches, matches);
         }, element => {
           matches++;
           totalMatches++;
-          this.opt.each(element);
+          this.opt.each(element, originalArrayElement);
         }, () => {
           if (matches === 0) {
-            this.opt.noMatch(kw);
+            this.opt.noMatch(kw, originalArrayElement);
           }
-          if (kwArr[kwArrLen - 1] === kw) {
+          if (kwArrLen - 1 === index) {
             this.opt.done(totalMatches);
           } else {
-            handler(kwArr[kwArr.indexOf(kw) + 1]);
+            const nextIndex = index + 1;
+            handler(kwArr[nextIndex], nextIndex);
           }
         });
       };
@@ -860,7 +872,7 @@ class Mark {
     if (kwArrLen === 0) {
       this.opt.done(totalMatches);
     } else {
-      handler(kwArr[0]);
+      handler(kwArr[0], 0);
     }
   }
 

@@ -4,13 +4,13 @@ describe('basic mark with each callback', function() {
   beforeEach(function(done) {
     loadFixtures('basic/main.html');
 
-    eachCalled = 0;
+    eachCalled = [];
     $ctx = $('.basic');
     new Mark($ctx[0]).mark('lorem ipsum', {
       'diacritics': false,
       'separateWordSearch': false,
-      'each': function() {
-        eachCalled++;
+      'each': function(el, originalData) {
+        eachCalled.push(originalData);
       },
       'done': function() {
         done();
@@ -19,6 +19,7 @@ describe('basic mark with each callback', function() {
   });
 
   it('should call the each callback for each marked element', function() {
-    expect(eachCalled).toBe(4);
+    expect(eachCalled.length).toBe(4);
+    expect(eachCalled.every(od => od === 'lorem ipsum')).toBe(true);
   });
 });

@@ -19,8 +19,10 @@
   $ctx.load("fixtures/basic/main.html", function() {
     let start = new Date(),
       instance = new Mark($ctx.get());
-    console.log(instance);
-    instance.mark("lorem", {
+    let arr = [
+    	{ keyword: "lorem", data: { this: "is", some: { arbitrary: "data" } } }
+    ]
+    instance.mark(arr, {
       debug: true,
       done: function(counter) {
         const end = new Date(),
