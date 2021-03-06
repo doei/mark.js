@@ -115,18 +115,23 @@ class Mark {
    */
   getSeparatedKeywords(sv) {
     let stack = [], originalValues = [];
+    if (!this.opt.separateWordSearch){
+      // sort because of https://git.io/v6USg
+      sv = sv.sort((a, b) => b.length - a.length);
+    }
     sv.forEach(kw => {
       const originalValue = kw;
+      let keyword = kw;
       if (typeof kw === 'object' && kw !== null){
-        kw = kw.keyword;
+        keyword = kw.keyword;
       }
       if (!this.opt.separateWordSearch) {
-        if (kw.trim() && stack.indexOf(kw) === -1) {
-          stack.push(kw);
+        if (keyword.trim() && stack.indexOf(keyword) === -1) {
+          stack.push(keyword);
           originalValues.push(originalValue);
         }
       } else {
-        kw.split(' ').forEach(kwSplitted => {
+        keyword.split(' ').forEach(kwSplitted => {
           if (kwSplitted.trim() && stack.indexOf(kwSplitted) === -1) {
             stack.push(kwSplitted);
             originalValues.push(originalValue);
@@ -135,10 +140,7 @@ class Mark {
       }
     });
     return {
-      // sort because of https://git.io/v6USg
-      'keywords': stack.sort((a, b) => {
-        return b.length - a.length;
-      }),
+      'keywords': stack,
       'originalValues': originalValues,
       'length': stack.length,
     };

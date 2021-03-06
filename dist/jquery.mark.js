@@ -713,20 +713,28 @@
 
         var stack = [],
             originalValues = [];
+
+        if (!this.opt.separateWordSearch) {
+          sv = sv.sort(function (a, b) {
+            return b.length - a.length;
+          });
+        }
+
         sv.forEach(function (kw) {
           var originalValue = kw;
+          var keyword = kw;
 
           if (_typeof(kw) === 'object' && kw !== null) {
-            kw = kw.keyword;
+            keyword = kw.keyword;
           }
 
           if (!_this.opt.separateWordSearch) {
-            if (kw.trim() && stack.indexOf(kw) === -1) {
-              stack.push(kw);
+            if (keyword.trim() && stack.indexOf(keyword) === -1) {
+              stack.push(keyword);
               originalValues.push(originalValue);
             }
           } else {
-            kw.split(' ').forEach(function (kwSplitted) {
+            keyword.split(' ').forEach(function (kwSplitted) {
               if (kwSplitted.trim() && stack.indexOf(kwSplitted) === -1) {
                 stack.push(kwSplitted);
                 originalValues.push(originalValue);
@@ -735,9 +743,7 @@
           }
         });
         return {
-          'keywords': stack.sort(function (a, b) {
-            return b.length - a.length;
-          }),
+          'keywords': stack,
           'originalValues': originalValues,
           'length': stack.length
         };
@@ -1123,10 +1129,6 @@
           var regex = new RegExpCreator(_this9.opt).create(kw);
           var matches = 0;
           var originalArrayElement = originalValues[index];
-
-          if (_typeof(kw) === 'object' && kw !== null) {
-            kw = kw.keyword;
-          }
 
           _this9.log("Searching with expression \"".concat(regex, "\""));
 

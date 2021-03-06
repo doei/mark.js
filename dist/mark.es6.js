@@ -524,18 +524,22 @@
     }
     getSeparatedKeywords(sv) {
       let stack = [], originalValues = [];
+      if (!this.opt.separateWordSearch){
+        sv = sv.sort((a, b) => b.length - a.length);
+      }
       sv.forEach(kw => {
         const originalValue = kw;
+        let keyword = kw;
         if (typeof kw === 'object' && kw !== null){
-          kw = kw.keyword;
+          keyword = kw.keyword;
         }
         if (!this.opt.separateWordSearch) {
-          if (kw.trim() && stack.indexOf(kw) === -1) {
-            stack.push(kw);
+          if (keyword.trim() && stack.indexOf(keyword) === -1) {
+            stack.push(keyword);
             originalValues.push(originalValue);
           }
         } else {
-          kw.split(' ').forEach(kwSplitted => {
+          keyword.split(' ').forEach(kwSplitted => {
             if (kwSplitted.trim() && stack.indexOf(kwSplitted) === -1) {
               stack.push(kwSplitted);
               originalValues.push(originalValue);
@@ -544,9 +548,7 @@
         }
       });
       return {
-        'keywords': stack.sort((a, b) => {
-          return b.length - a.length;
-        }),
+        'keywords': stack,
         'originalValues': originalValues,
         'length': stack.length,
       };
@@ -871,9 +873,6 @@
           const regex = new RegExpCreator(this.opt).create(kw);
           let matches = 0;
           const originalArrayElement = originalValues[index];
-          if (typeof kw === 'object' && kw !== null){
-            kw = kw.keyword;
-          }
           this.log(`Searching with expression "${regex}"`);
           this[fn](regex, 1, (term, node) => {
             return this.opt.filter(node, kw, totalMatches, matches);
